@@ -38,7 +38,7 @@ build_component () {   # $1 = name, $2 = identifier, $3 = mit Skript?
     local extra=()
     [ "${3:-}" = "scripts" ] && extra=(--scripts "$WORK/scripts")
     pkgbuild --root "$root" --component-plist "$plist" --identifier "$2" \
-             --version "$VERSION" --install-location / "${extra[@]}" "$WORK/pkgs/$1.pkg"
+             --version "$VERSION" --install-location / ${extra[@]+"${extra[@]}"} "$WORK/pkgs/$1.pkg"
 }
 
 build_component au   com.stellaraudio.stellarstrings.au scripts
