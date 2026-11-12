@@ -18,11 +18,9 @@ jobs:
       - name: Version bestimmen
         id: ver
         run: |
-          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
-            echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
-          else
-            echo "version=1.0.0" >> "$GITHUB_OUTPUT"
-          fi
+          # Version aus CMakeLists.txt: project(StellarStrings VERSION x.y.z ...)
+          v=$(sed -nE 's/^project\(StellarStrings VERSION ([0-9.]+).*/\1/p' CMakeLists.txt)
+          echo "version=$v" >> "$GITHUB_OUTPUT"
 
       - name: Configure
         run: cmake -B build -G Xcode
@@ -48,10 +46,14 @@ jobs:
           name: StellarStrings-macOS-Installer
           path: StellarStrings-*-macOS.pkg
 
-      - name: GitHub Release (nur bei Tags v*)
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: GitHub Release v<Version> anlegen/aktualisieren
+        if: github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: v${{ steps.ver.outputs.version }}
+          target_commitish: ${{ github.sha }}
+          name: Stellar Strings ${{ steps.ver.outputs.version }}
+          make_latest: true
           files: StellarStrings-*-macOS.pkg
           body: |
             **Stellar Strings ${{ steps.ver.outputs.version }}**: macOS-Installer (Universal: Apple Silicon + Intel) mit Audio Unit und VST3.

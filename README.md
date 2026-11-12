@@ -63,7 +63,7 @@ laden. Taucht das Plugin nicht sofort auf, hilft ein Neustart von Logic oder
 Bei jedem Push auf `main` baut `.github/workflows/build-macos.yml` auf einem Mac:
 Universal Binary → `StellarStrings-<version>-macOS.pkg` → Test-Installation →
 `auval`-Validierung. Das `.pkg` liegt dann unter *Actions → letzter Lauf → Artifacts*.
-Ein Tag `v1.0.0` erzeugt zusätzlich ein GitHub-Release mit dem Installer als Download.
+Außerdem wird das GitHub-Release `v<Version>` (Version aus `CMakeLists.txt`) mit dem Installer als Download angelegt bzw. aktualisiert.
 
 Der Installer legt die AU nach `/Library/Audio/Plug-Ins/Components` und (abwählbar)
 die VST3 nach `/Library/Audio/Plug-Ins/VST3`. Lokal erstellen:
