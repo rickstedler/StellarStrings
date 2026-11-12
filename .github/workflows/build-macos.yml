@@ -1,0 +1,37 @@
+name: Build macOS (AU + VST3)
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -B build -G Xcode
+
+      - name: Build
+        run: cmake --build build --config Release --target StellarStrings_AU StellarStrings_VST3 -- -quiet
+
+      - name: Validate Audio Unit (auval)
+        run: |
+          mkdir -p ~/Library/Audio/Plug-Ins/Components
+          cp -R "build/StellarStrings_artefacts/Release/AU/Stellar Strings.component" ~/Library/Audio/Plug-Ins/Components/
+          killall -9 AudioComponentRegistrar || true
+          auval -v aumu Stst Stla
+
+      - name: Package
+        run: |
+          cd build/StellarStrings_artefacts/Release
+          ditto -c -k --keepParent "AU/Stellar Strings.component" "$GITHUB_WORKSPACE/StellarStrings-AU.zip"
+          ditto -c -k --keepParent "VST3/Stellar Strings.vst3" "$GITHUB_WORKSPACE/StellarStrings-VST3.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: StellarStrings-macOS
+          path: |
+            StellarStrings-AU.zip
+            StellarStrings-VST3.zip
