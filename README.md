@@ -58,10 +58,23 @@ Danach in Logic Pro als *Instrument → AU-Instrumente → Stellar Audio → Ste
 laden. Taucht das Plugin nicht sofort auf, hilft ein Neustart von Logic oder
 `killall -9 AudioComponentRegistrar`.
 
-Ohne eigenen Build: Der Workflow `.github/workflows/build-macos.yml` baut auf GitHub
-AU + VST3 als Universal Binary, validiert mit `auval` und stellt ZIPs als Artefakt
-bereit. Selbst gebaute, nicht signierte Plugins müssen eventuell per
-`xattr -dr com.apple.quarantine "Stellar Strings.component"` freigegeben werden.
+## Installer (.pkg)
+
+Bei jedem Push auf `main` baut `.github/workflows/build-macos.yml` auf einem Mac:
+Universal Binary → `StellarStrings-<version>-macOS.pkg` → Test-Installation →
+`auval`-Validierung. Das `.pkg` liegt dann unter *Actions → letzter Lauf → Artifacts*.
+Ein Tag `v1.0.0` erzeugt zusätzlich ein GitHub-Release mit dem Installer als Download.
+
+Der Installer legt die AU nach `/Library/Audio/Plug-Ins/Components` und (abwählbar)
+die VST3 nach `/Library/Audio/Plug-Ins/VST3`. Lokal erstellen:
+
+```bash
+installer/make_installer.sh 1.0.0
+```
+
+Der Installer ist nicht mit einer Apple-Developer-ID signiert bzw. notarisiert:
+beim ersten Öffnen per Rechtsklick → *Öffnen* (oder *Systemeinstellungen →
+Datenschutz & Sicherheit → Trotzdem öffnen*) starten.
 
 ## Offline-Test
 

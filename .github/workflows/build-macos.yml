@@ -1,8 +1,13 @@
-name: Build macOS (AU + VST3)
+name: Build macOS Installer (AU + VST3)
 
 on:
   push:
+    branches: [main]
+    tags: ["v*"]
   workflow_dispatch:
+
+permissions:
+  contents: write   # zum Anlegen von Releases bei Tags
 
 jobs:
   build:
@@ -10,28 +15,45 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Version bestimmen
+        id: ver
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=1.0.0" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Configure
         run: cmake -B build -G Xcode
 
-      - name: Build
+      - name: Build (Universal Binary arm64 + x86_64)
         run: cmake --build build --config Release --target StellarStrings_AU StellarStrings_VST3 -- -quiet
 
-      - name: Validate Audio Unit (auval)
+      - name: Installer bauen
+        run: installer/make_installer.sh "${{ steps.ver.outputs.version }}" "StellarStrings-${{ steps.ver.outputs.version }}-macOS.pkg"
+
+      - name: Installer testen + Audio Unit validieren (auval)
         run: |
-          mkdir -p ~/Library/Audio/Plug-Ins/Components
-          cp -R "build/StellarStrings_artefacts/Release/AU/Stellar Strings.component" ~/Library/Audio/Plug-Ins/Components/
+          # die beim Build nach ~/Library kopierte Version entfernen, damit die installierte geprüft wird
+          rm -rf ~/Library/Audio/Plug-Ins/Components/"Stellar Strings.component"
+          sudo installer -pkg "StellarStrings-${{ steps.ver.outputs.version }}-macOS.pkg" -target /
+          ls -la "/Library/Audio/Plug-Ins/Components/" "/Library/Audio/Plug-Ins/VST3/"
+          lipo -info "/Library/Audio/Plug-Ins/Components/Stellar Strings.component/Contents/MacOS/Stellar Strings"
           killall -9 AudioComponentRegistrar || true
           auval -v aumu Stst Stla
 
-      - name: Package
-        run: |
-          cd build/StellarStrings_artefacts/Release
-          ditto -c -k --keepParent "AU/Stellar Strings.component" "$GITHUB_WORKSPACE/StellarStrings-AU.zip"
-          ditto -c -k --keepParent "VST3/Stellar Strings.vst3" "$GITHUB_WORKSPACE/StellarStrings-VST3.zip"
-
       - uses: actions/upload-artifact@v4
         with:
-          name: StellarStrings-macOS
-          path: |
-            StellarStrings-AU.zip
-            StellarStrings-VST3.zip
+          name: StellarStrings-macOS-Installer
+          path: StellarStrings-*-macOS.pkg
+
+      - name: GitHub Release (nur bei Tags v*)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: StellarStrings-*-macOS.pkg
+          body: |
+            **Stellar Strings ${{ steps.ver.outputs.version }}**: macOS-Installer (Universal: Apple Silicon + Intel) mit Audio Unit und VST3.
+
+            Installation: `.pkg` per Rechtsklick → *Öffnen* starten (der Installer ist nicht notarisiert), danach Logic Pro neu starten.
